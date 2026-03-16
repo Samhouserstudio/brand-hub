@@ -1,0 +1,256 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT MODE — Premium brand-hub aesthetic: warm neutrals + indigo accent */
+:root {
+  --button-outline: rgba(0,0,0, .08);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .07);
+  --background: 220 20% 97%;
+  --foreground: 230 25% 10%;
+  --border: 220 13% 90%;
+  --card: 0 0% 100%;
+  --card-foreground: 230 25% 10%;
+  --card-border: 220 13% 92%;
+  --sidebar: 230 25% 10%;
+  --sidebar-foreground: 220 20% 90%;
+  --sidebar-border: 230 20% 15%;
+  --sidebar-primary: 245 58% 51%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 230 20% 16%;
+  --sidebar-accent-foreground: 220 20% 90%;
+  --sidebar-ring: 245 58% 51%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 230 25% 10%;
+  --popover-border: 220 13% 90%;
+  --primary: 245 58% 51%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 93%;
+  --secondary-foreground: 230 25% 10%;
+  --muted: 220 14% 93%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 220 14% 93%;
+  --accent-foreground: 230 25% 10%;
+  --destructive: 0 84% 42%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 220 13% 82%;
+  --ring: 245 58% 51%;
+  --chart-1: 245 58% 51%;
+  --chart-2: 263 70% 58%;
+  --chart-3: 160 60% 45%;
+  --chart-4: 43 74% 49%;
+  --chart-5: 12 76% 61%;
+  --font-sans: 'Satoshi', 'Inter', sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: .625rem;
+  --shadow-2xs: 0px 1px 2px 0px hsl(230 25% 10% / 0.04);
+  --shadow-xs: 0px 1px 3px 0px hsl(230 25% 10% / 0.06);
+  --shadow-sm: 0px 2px 4px -1px hsl(230 25% 10% / 0.06), 0px 1px 2px -1px hsl(230 25% 10% / 0.04);
+  --shadow: 0px 4px 8px -2px hsl(230 25% 10% / 0.06), 0px 2px 4px -2px hsl(230 25% 10% / 0.04);
+  --shadow-md: 0px 6px 12px -2px hsl(230 25% 10% / 0.08), 0px 3px 6px -2px hsl(230 25% 10% / 0.04);
+  --shadow-lg: 0px 12px 24px -4px hsl(230 25% 10% / 0.10), 0px 4px 8px -2px hsl(230 25% 10% / 0.04);
+  --shadow-xl: 0px 20px 40px -8px hsl(230 25% 10% / 0.12), 0px 8px 16px -4px hsl(230 25% 10% / 0.04);
+  --shadow-2xl: 0px 32px 64px -12px hsl(230 25% 10% / 0.14);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+/* DARK MODE */
+.dark {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .08);
+  --background: 230 20% 7%;
+  --foreground: 220 20% 93%;
+  --border: 230 15% 16%;
+  --card: 230 18% 10%;
+  --card-foreground: 220 20% 93%;
+  --card-border: 230 15% 14%;
+  --sidebar: 230 25% 8%;
+  --sidebar-foreground: 220 20% 85%;
+  --sidebar-border: 230 20% 13%;
+  --sidebar-primary: 245 58% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 230 18% 14%;
+  --sidebar-accent-foreground: 220 20% 85%;
+  --sidebar-ring: 245 58% 60%;
+  --popover: 230 18% 12%;
+  --popover-foreground: 220 20% 93%;
+  --popover-border: 230 15% 18%;
+  --primary: 245 58% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 230 15% 16%;
+  --secondary-foreground: 220 20% 93%;
+  --muted: 230 12% 18%;
+  --muted-foreground: 220 9% 55%;
+  --accent: 230 14% 16%;
+  --accent-foreground: 220 20% 93%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 230 12% 24%;
+  --ring: 245 58% 60%;
+  --chart-1: 245 58% 65%;
+  --chart-2: 263 70% 68%;
+  --chart-3: 160 60% 55%;
+  --chart-4: 43 74% 65%;
+  --chart-5: 12 76% 65%;
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.10);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.15);
+  --shadow-sm: 0px 2px 4px -1px hsl(0 0% 0% / 0.15), 0px 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow: 0px 4px 8px -2px hsl(0 0% 0% / 0.15), 0px 2px 4px -2px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0px 6px 12px -2px hsl(0 0% 0% / 0.20), 0px 3px 6px -2px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0px 12px 24px -4px hsl(0 0% 0% / 0.25), 0px 4px 8px -2px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0px 20px 40px -8px hsl(0 0% 0% / 0.30), 0px 8px 16px -4px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0px 32px 64px -12px hsl(0 0% 0% / 0.35);
+
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* ── Elevate system ── */
+@layer utilities {
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  .no-default-hover-elevate {}
+  .no-default-active-elevate {}
+
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: -1;
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: 999;
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after {
+    inset: -1px;
+  }
+}
+
+/* ── Checkerboard pattern for logo previews ── */
+.bg-checkerboard {
+  background-image:
+    linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%),
+    linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%),
+    linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+/* ── Smooth scroll ── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
