@@ -1,8 +1,13 @@
 {
-  "buildCommand": "npm run build:client",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist/public",
   "framework": null,
+  "functions": {
+    "api/index.mjs": {
+      "includeFiles": "node_modules/@anthropic-ai/**"
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" }
+    { "source": "/api/(.*)", "destination": "/api/index.mjs" }
   ]
 }

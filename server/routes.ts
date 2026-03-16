@@ -1,7 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { Anthropic } from "@anthropic-ai/sdk";
 import { randomUUID } from "crypto";
 import {
   signupSchema,
@@ -634,6 +633,7 @@ ${searchResults.map((r) => `- [${r.type}] ${r.title}: ${r.description}`).join("\
 `;
 
     try {
+      const { Anthropic } = await import("@anthropic-ai/sdk");
       const client = new Anthropic();
       const message = await client.messages.create({
         model: "claude_sonnet_4_6",

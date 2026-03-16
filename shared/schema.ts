@@ -231,21 +231,5 @@ export const insertColorSchema = z.object({
 
 export type InsertColor = z.infer<typeof insertColorSchema>;
 
-// keep the unused drizzle imports so the template doesn't complain
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// Drizzle ORM table definitions removed — using in-memory storage only.
+// If migrating to a real database, add drizzle-orm schema here.
