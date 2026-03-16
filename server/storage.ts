@@ -8,14 +8,15 @@ import type {
   SearchResult,
   UserAccount,
   BrandHub,
-} from "@shared/schema";
+} from "../shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   // Auth
   getUserByEmail(email: string): Promise<UserAccount | undefined>;
   getUserById(id: string): Promise<UserAccount | undefined>;
-  createUserAccount(data: { email: string; name: string; passwordHash: string }): Promise<UserAccount>;
+  getUserByGoogleId(googleId: string): Promise<UserAccount | undefined>;
+  createUserAccount(data: { email: string; name: string; passwordHash: string; googleId?: string; avatarUrl?: string }): Promise<UserAccount>;
 
   // Brand Hubs
   getHubsByOwner(ownerId: string): Promise<BrandHub[]>;
@@ -384,12 +385,18 @@ export class MemStorage implements IStorage {
     return this.userAccounts.get(id);
   }
 
-  async createUserAccount(data: { email: string; name: string; passwordHash: string }): Promise<UserAccount> {
+  async getUserByGoogleId(googleId: string): Promise<UserAccount | undefined> {
+    return Array.from(this.userAccounts.values()).find((u) => u.googleId === googleId);
+  }
+
+  async createUserAccount(data: { email: string; name: string; passwordHash: string; googleId?: string; avatarUrl?: string }): Promise<UserAccount> {
     const user: UserAccount = {
       id: randomUUID(),
       email: data.email,
       name: data.name,
       passwordHash: data.passwordHash,
+      googleId: data.googleId,
+      avatarUrl: data.avatarUrl,
       createdAt: new Date().toISOString(),
     };
     this.userAccounts.set(user.id, user);

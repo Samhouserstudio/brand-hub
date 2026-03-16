@@ -21,6 +21,7 @@ import ImagesPage from "@/pages/ImagesPage";
 import ArtworkPage from "@/pages/ArtworkPage";
 import IconsPage from "@/pages/IconsPage";
 import GuidelinesPage from "@/pages/GuidelinesPage";
+import AuthCallbackPage from "@/pages/AuthCallbackPage";
 import BrandLayout from "@/components/BrandLayout";
 import { useQuery } from "@tanstack/react-query";
 import type { BrandHub } from "@shared/schema";
@@ -71,6 +72,7 @@ function AppRouter() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
+      <Route path="/auth/callback" component={AuthCallbackPage} />
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/dashboard/new" component={CreateHubPage} />
       <Route path="/hub/:slug/admin">

@@ -8,8 +8,8 @@ import {
   loginSchema,
   createHubSchema,
   insertColorSchema,
-} from "@shared/schema";
-import type { BrandColor, BrandGradient, TypographyEntry, LogoAsset, BrandAsset, GuidelineModule } from "@shared/schema";
+} from "../shared/schema";
+import type { BrandColor, BrandGradient, TypographyEntry, LogoAsset, BrandAsset, GuidelineModule } from "../shared/schema";
 
 // ── Session store ──
 const sessions = new Map<string, string>(); // token → userId
@@ -92,6 +92,183 @@ export async function registerRoutes(
       sessions.delete(auth.slice(7));
     }
     res.json({ ok: true });
+  });
+
+  // ── Google OAuth ──
+
+  app.get("/api/auth/google", (req: Request, res: Response) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      res.status(500).json({ message: "Google OAuth not configured" });
+      return;
+    }
+    // Determine redirect URI from the request origin
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "";
+    const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "consent",
+    });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+
+  app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
+    const { code } = req.query;
+    if (!code || typeof code !== "string") {
+      res.status(400).json({ message: "Missing authorization code" });
+      return;
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      res.status(500).json({ message: "Google OAuth not configured" });
+      return;
+    }
+
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "";
+    const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
+
+    try {
+      // Exchange code for tokens
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const err = await tokenRes.text();
+        console.error("Google token exchange failed:", err);
+        res.status(400).json({ message: "Failed to exchange code" });
+        return;
+      }
+
+      const tokenData = await tokenRes.json() as any;
+
+      // Get user info from Google
+      const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!userInfoRes.ok) {
+        res.status(400).json({ message: "Failed to get user info" });
+        return;
+      }
+
+      const googleUser = await userInfoRes.json() as any;
+      const googleId = googleUser.id as string;
+      const email = googleUser.email as string;
+      const name = (googleUser.name as string) || email.split("@")[0];
+      const avatarUrl = (googleUser.picture as string) || "";
+
+      // Find or create user
+      let user = await storage.getUserByGoogleId(googleId);
+      if (!user) {
+        // Check if there's an existing user with same email
+        user = await storage.getUserByEmail(email);
+        if (user) {
+          // Link Google ID to existing account
+          (user as any).googleId = googleId;
+          (user as any).avatarUrl = avatarUrl;
+        } else {
+          // Create new account
+          user = await storage.createUserAccount({
+            email,
+            name,
+            passwordHash: "", // No password for Google OAuth users
+            googleId,
+            avatarUrl,
+          });
+        }
+      }
+
+      const token = randomUUID();
+      sessions.set(token, user.id);
+
+      // Redirect to frontend with token in hash
+      // The frontend will pick up the token from the URL
+      res.redirect(`/#/auth/callback?token=${encodeURIComponent(token)}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&id=${encodeURIComponent(user.id)}`);
+    } catch (err) {
+      console.error("Google OAuth error:", err);
+      res.redirect(`/#/login?error=${encodeURIComponent("Google sign-in failed")}`);
+    }
+  });
+
+  // Token-based Google auth for the frontend to exchange the callback token
+  app.post("/api/auth/google/token", async (req: Request, res: Response) => {
+    const { credential } = req.body;
+    if (!credential || typeof credential !== "string") {
+      res.status(400).json({ message: "Missing credential" });
+      return;
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      res.status(500).json({ message: "Google OAuth not configured" });
+      return;
+    }
+
+    try {
+      // Verify the ID token using Google's tokeninfo endpoint
+      const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+      if (!verifyRes.ok) {
+        res.status(400).json({ message: "Invalid credential" });
+        return;
+      }
+
+      const payload = await verifyRes.json() as any;
+      if (payload.aud !== clientId) {
+        res.status(400).json({ message: "Invalid audience" });
+        return;
+      }
+
+      const googleId = payload.sub as string;
+      const email = payload.email as string;
+      const name = (payload.name as string) || email.split("@")[0];
+      const avatarUrl = (payload.picture as string) || "";
+
+      let user = await storage.getUserByGoogleId(googleId);
+      if (!user) {
+        user = await storage.getUserByEmail(email);
+        if (user) {
+          (user as any).googleId = googleId;
+          (user as any).avatarUrl = avatarUrl;
+        } else {
+          user = await storage.createUserAccount({
+            email,
+            name,
+            passwordHash: "",
+            googleId,
+            avatarUrl,
+          });
+        }
+      }
+
+      const token = randomUUID();
+      sessions.set(token, user.id);
+
+      res.json({
+        token,
+        user: { id: user.id, email: user.email, name: user.name },
+      });
+    } catch (err) {
+      console.error("Google token verification error:", err);
+      res.status(500).json({ message: "Authentication failed" });
+    }
   });
 
   app.get("/api/auth/me", async (req: Request, res: Response) => {

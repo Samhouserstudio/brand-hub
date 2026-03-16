@@ -13,6 +13,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, name: string, password: string) => Promise<void>;
+  loginWithGoogle: () => void;
+  handleGoogleCallback: (params: URLSearchParams) => void;
   logout: () => void;
 }
 
@@ -31,17 +33,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiRequest("POST", "/api/auth/login", { email, password });
     const data = await res.json();
+    queryClient.clear();
     setToken(data.token);
     setUser(data.user);
-    queryClient.clear();
+    // Return the user so callers know auth succeeded
+    return data.user;
   }, []);
 
   const signup = useCallback(async (email: string, name: string, password: string) => {
     const res = await apiRequest("POST", "/api/auth/signup", { email, name, password });
     const data = await res.json();
+    queryClient.clear();
     setToken(data.token);
     setUser(data.user);
-    queryClient.clear();
+    return data.user;
+  }, []);
+
+  const loginWithGoogle = useCallback(() => {
+    // Redirect to the backend Google OAuth initiation endpoint
+    // Use the current origin to build the full URL
+    const apiBase = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
+    window.location.href = `${apiBase}/api/auth/google`;
+  }, []);
+
+  const handleGoogleCallback = useCallback((params: URLSearchParams) => {
+    const callbackToken = params.get("token");
+    const name = params.get("name");
+    const email = params.get("email");
+    const id = params.get("id");
+
+    if (callbackToken && email && id) {
+      setToken(callbackToken);
+      setUser({ id, email, name: name || email });
+      queryClient.clear();
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -58,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, signup, loginWithGoogle, handleGoogleCallback, logout }}>
       {children}
     </AuthContext.Provider>
   );

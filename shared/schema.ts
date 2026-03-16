@@ -152,6 +152,8 @@ export interface UserAccount {
   email: string;
   name: string;
   passwordHash: string;
+  googleId?: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 

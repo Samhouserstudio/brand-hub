@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Hexagon, Plus, Globe, Lock, ExternalLink, LogOut } from "lucide-react";
@@ -11,14 +12,25 @@ import type { BrandHub } from "@shared/schema";
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const [authChecked, setAuthChecked] = useState(false);
 
   const { data: hubs, isLoading } = useQuery<BrandHub[]>({
     queryKey: ["/api/hubs"],
+    enabled: !!user,
   });
 
-  // Redirect if not logged in
+  // Redirect if not logged in — use useEffect to avoid redirect during state settling
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!user) {
+        setLocation("/login");
+      }
+      setAuthChecked(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [user, setLocation]);
+
   if (!user) {
-    setLocation("/login");
     return null;
   }
 
