@@ -26,9 +26,10 @@ const categoryIcons: Record<string, React.ReactNode> = {
 
 interface AISearchProps {
   variant?: "hero" | "compact";
+  slug: string;
 }
 
-export default function AISearch({ variant = "hero" }: AISearchProps) {
+export default function AISearch({ variant = "hero", slug }: AISearchProps) {
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [answer, setAnswer] = useState("");
@@ -44,7 +45,7 @@ export default function AISearch({ variant = "hero" }: AISearchProps) {
     setQuery(q);
 
     try {
-      const res = await apiRequest("POST", "/api/ai-search", { query: q });
+      const res = await apiRequest("POST", `/api/public/${slug}/ai-search`, { query: q });
       const data = await res.json();
       setAnswer(data.answer || "");
       setResults(data.results || []);

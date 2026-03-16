@@ -5,9 +5,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { BrandColor, BrandGradient } from "@shared/schema";
 
-export default function ColorsPage() {
-  const { data: colors, isLoading: loadingColors } = useQuery<BrandColor[]>({ queryKey: ["/api/colors"] });
-  const { data: gradients, isLoading: loadingGradients } = useQuery<BrandGradient[]>({ queryKey: ["/api/gradients"] });
+interface ColorsPageProps {
+  slug: string;
+}
+
+export default function ColorsPage({ slug }: ColorsPageProps) {
+  const { data: colors, isLoading: loadingColors } = useQuery<BrandColor[]>({ queryKey: [`/api/public/${slug}/colors`] });
+  const { data: gradients, isLoading: loadingGradients } = useQuery<BrandGradient[]>({ queryKey: [`/api/public/${slug}/gradients`] });
 
   const groups = colors
     ? Array.from(new Set(colors.map((c) => c.group)))

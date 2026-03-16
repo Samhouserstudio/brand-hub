@@ -6,13 +6,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { BrandAsset } from "@shared/schema";
 import { useState } from "react";
 
-export default function ImagesPage() {
+interface ImagesPageProps {
+  slug: string;
+}
+
+export default function ImagesPage({ slug }: ImagesPageProps) {
   const { data: assets, isLoading } = useQuery<BrandAsset[]>({
-    queryKey: ["/api/assets", { category: "images" }],
-    queryFn: async () => {
-      const res = await fetch("/api/assets?category=images");
-      return res.json();
-    },
+    queryKey: [`/api/public/${slug}/assets?category=images`],
   });
 
   const [activeTag, setActiveTag] = useState<string | null>(null);

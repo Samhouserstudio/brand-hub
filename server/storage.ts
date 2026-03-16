@@ -1,46 +1,54 @@
-import { type User, type InsertUser } from "@shared/schema";
 import type {
   BrandAsset,
   BrandColor,
   BrandGradient,
   TypographyEntry,
   GuidelineModule,
-  Organization,
   LogoAsset,
   SearchResult,
+  UserAccount,
+  BrandHub,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Auth
+  getUserByEmail(email: string): Promise<UserAccount | undefined>;
+  getUserById(id: string): Promise<UserAccount | undefined>;
+  createUserAccount(data: { email: string; name: string; passwordHash: string }): Promise<UserAccount>;
 
-  // Brand Hub
-  getOrganization(): Organization;
-  getAssets(category?: string): BrandAsset[];
-  getAssetById(id: string): BrandAsset | undefined;
-  getLogos(): LogoAsset[];
-  getColors(): BrandColor[];
-  getGradients(): BrandGradient[];
-  getTypography(): TypographyEntry[];
-  getGuidelines(): GuidelineModule[];
-  getFeaturedAssets(): BrandAsset[];
-  searchAssets(query: string): SearchResult[];
+  // Brand Hubs
+  getHubsByOwner(ownerId: string): Promise<BrandHub[]>;
+  getHubBySlug(slug: string): Promise<BrandHub | undefined>;
+  getHubById(id: string): Promise<BrandHub | undefined>;
+  createHub(data: Omit<BrandHub, "id" | "createdAt" | "updatedAt">): Promise<BrandHub>;
+  updateHub(id: string, data: Partial<BrandHub>): Promise<BrandHub>;
+  deleteHub(id: string): Promise<void>;
+
+  // Hub-scoped data
+  getHubColors(hubId: string): BrandColor[];
+  addHubColor(hubId: string, color: BrandColor): void;
+  removeHubColor(hubId: string, colorId: string): void;
+  getHubGradients(hubId: string): BrandGradient[];
+  addHubGradient(hubId: string, gradient: BrandGradient): void;
+  removeHubGradient(hubId: string, gradientId: string): void;
+  getHubTypography(hubId: string): TypographyEntry[];
+  addHubTypography(hubId: string, entry: TypographyEntry): void;
+  removeHubTypography(hubId: string, entryId: string): void;
+  getHubLogos(hubId: string): LogoAsset[];
+  addHubLogo(hubId: string, logo: LogoAsset): void;
+  removeHubLogo(hubId: string, logoId: string): void;
+  getHubAssets(hubId: string, category?: string): BrandAsset[];
+  addHubAsset(hubId: string, asset: BrandAsset): void;
+  removeHubAsset(hubId: string, assetId: string): void;
+  getHubGuidelines(hubId: string): GuidelineModule[];
+  addHubGuideline(hubId: string, guideline: GuidelineModule): void;
+  removeHubGuideline(hubId: string, guidelineId: string): void;
+  getHubFeaturedAssets(hubId: string): BrandAsset[];
+  searchHubAssets(hubId: string, query: string): SearchResult[];
 }
 
 // ── Demo data seed ──
-
-const demoOrg: Organization = {
-  id: "org-1",
-  name: "Meridian",
-  logoUrl: "",
-  heroHeading: "Your brand, all in one place",
-  heroSubheading:
-    "Search, preview, and download every approved brand asset. Powered by an AI brand assistant that finds exactly what you need.",
-  primaryColor: "#1a1a2e",
-  accentColor: "#6366f1",
-};
 
 const demoColors: BrandColor[] = [
   { id: "c1", name: "Midnight", hex: "#1a1a2e", rgb: "26, 26, 46", cmyk: "43, 43, 0, 82", pantone: "2768 C", role: "primary", group: "Primary", description: "Primary brand color used for headlines, primary buttons, and key UI elements." },
@@ -200,17 +208,12 @@ const demoLogos: LogoAsset[] = [
 ];
 
 const demoAssets: BrandAsset[] = [
-  // Images
   { id: "img-1", category: "images", subcategory: "Team", title: "Team Collaboration", description: "Team working together in modern office environment.", tags: ["team", "office", "collaboration", "people", "lifestyle"], usageNotes: "Approved for internal presentations and careers pages.", searchPhrases: ["team photo", "office", "people working"], previewUrl: "", downloadFiles: [{ name: "team-collab.jpg", format: "JPG", url: "#", size: "2.4 MB" }], visibility: "public", featured: true, isPrimary: false, createdAt: "2025-02-10", updatedAt: "2025-02-10" },
   { id: "img-2", category: "images", subcategory: "Product", title: "Dashboard Interface", description: "Product screenshot showing the main dashboard view.", tags: ["product", "screenshot", "dashboard", "interface", "ui"], usageNotes: "Current as of v3.2. Use for marketing materials and sales decks.", searchPhrases: ["product shot", "app screenshot", "interface"], previewUrl: "", downloadFiles: [{ name: "dashboard-screenshot.png", format: "PNG", url: "#", size: "1.8 MB" }], visibility: "public", featured: true, isPrimary: false, createdAt: "2025-03-01", updatedAt: "2025-03-01" },
   { id: "img-3", category: "images", subcategory: "Event", title: "Conference Keynote", description: "CEO presenting at annual conference keynote.", tags: ["event", "conference", "keynote", "speaking", "leadership"], usageNotes: "Approved for press and social media.", searchPhrases: ["event photo", "conference", "keynote"], previewUrl: "", downloadFiles: [{ name: "conference-keynote.jpg", format: "JPG", url: "#", size: "3.1 MB" }], visibility: "public", featured: false, isPrimary: false, createdAt: "2025-01-20", updatedAt: "2025-01-20" },
-
-  // Artwork
   { id: "art-1", category: "artwork", subcategory: "Illustrations", title: "Brand Illustration Set", description: "Custom illustrations used across the product and marketing.", tags: ["illustration", "custom", "marketing", "web", "product"], usageNotes: "Vector source available. Contact design team for custom variations.", searchPhrases: ["illustrations", "custom art", "brand artwork"], previewUrl: "", downloadFiles: [{ name: "illustrations.zip", format: "ZIP", url: "#", size: "5.6 MB" }], visibility: "public", featured: true, isPrimary: false, createdAt: "2025-02-15", updatedAt: "2025-02-15" },
   { id: "art-2", category: "artwork", subcategory: "Patterns", title: "Brand Pattern", description: "Geometric pattern using the brand's visual language.", tags: ["pattern", "geometric", "background", "texture", "decorative"], usageNotes: "Use at 10-20% opacity as a background texture.", searchPhrases: ["pattern", "background texture", "geometric"], previewUrl: "", downloadFiles: [{ name: "brand-pattern.svg", format: "SVG", url: "#", size: "24 KB" }, { name: "brand-pattern.png", format: "PNG", url: "#", size: "450 KB" }], visibility: "public", featured: false, isPrimary: false, createdAt: "2025-01-10", updatedAt: "2025-01-10" },
   { id: "art-3", category: "artwork", subcategory: "Social Media", title: "Social Media Templates", description: "Pre-designed social media post templates for Instagram, LinkedIn, and Twitter.", tags: ["social", "template", "instagram", "linkedin", "twitter", "social media"], usageNotes: "Editable in Figma. Maintain brand colors and typography.", searchPhrases: ["social media", "instagram post", "linkedin graphic", "social templates"], previewUrl: "", downloadFiles: [{ name: "social-templates.zip", format: "ZIP", url: "#", size: "12 MB" }], visibility: "public", featured: true, isPrimary: false, createdAt: "2025-03-05", updatedAt: "2025-03-05" },
-
-  // Icons
   { id: "icon-1", category: "icons", subcategory: "UI Icons", title: "Product Icon Set", description: "Full set of product UI icons in the Meridian style.", tags: ["icons", "ui", "product", "interface", "navigation"], usageNotes: "Use 24px for standard UI, 16px for compact views. Maintain 2px stroke weight.", searchPhrases: ["icons", "ui icons", "product icons"], previewUrl: "", downloadFiles: [{ name: "icons-svg.zip", format: "ZIP", url: "#", size: "180 KB" }], visibility: "public", featured: false, isPrimary: false, createdAt: "2025-02-01", updatedAt: "2025-02-01" },
   { id: "icon-2", category: "icons", subcategory: "Social Icons", title: "Social Platform Icons", description: "Brand-styled social media platform icons.", tags: ["social", "icons", "platforms", "twitter", "linkedin", "instagram", "social media"], usageNotes: "Use for social links in footers, emails, and presentations.", searchPhrases: ["social icons", "social media icons", "platform icons"], previewUrl: "", downloadFiles: [{ name: "social-icons.zip", format: "ZIP", url: "#", size: "45 KB" }], visibility: "public", featured: false, isPrimary: false, createdAt: "2025-01-15", updatedAt: "2025-01-15" },
 ];
@@ -225,7 +228,8 @@ const demoGuidelines: GuidelineModule[] = [
   { id: "gl-7", title: "Do's and Don'ts", slug: "dos-donts", order: 7, type: "dos-donts", content: "**Do:**\n• Use the approved color palette consistently\n• Maintain generous whitespace\n• Use the type hierarchy as documented\n• Keep layouts clean and organized\n• Use high-quality imagery\n• Maintain brand consistency across all touchpoints\n\n**Don't:**\n• Use off-brand colors or gradients\n• Crowd elements together\n• Use more than 2 typefaces in one design\n• Stretch, skew, or modify the logo\n• Use low-resolution images\n• Mix brand styles from different periods\n• Add decorative elements that serve no purpose" },
 ];
 
-// Combine all assets for search
+// ── Search helpers ──
+
 function getAllSearchableItems(
   assets: BrandAsset[],
   logos: LogoAsset[],
@@ -237,77 +241,27 @@ function getAllSearchableItems(
   const results: SearchResult[] = [];
 
   logos.forEach((l) => {
-    results.push({
-      type: "asset",
-      id: l.id,
-      title: l.title,
-      description: l.description,
-      previewUrl: l.previewUrl,
-      category: "logos",
-      relevance: 0,
-      downloadFiles: l.downloadFiles,
-    });
+    results.push({ type: "asset", id: l.id, title: l.title, description: l.description, previewUrl: l.previewUrl, category: "logos", relevance: 0, downloadFiles: l.downloadFiles });
   });
 
   assets.forEach((a) => {
-    results.push({
-      type: "asset",
-      id: a.id,
-      title: a.title,
-      description: a.description,
-      previewUrl: a.previewUrl,
-      category: a.category,
-      relevance: 0,
-      downloadFiles: a.downloadFiles,
-    });
+    results.push({ type: "asset", id: a.id, title: a.title, description: a.description, previewUrl: a.previewUrl, category: a.category, relevance: 0, downloadFiles: a.downloadFiles });
   });
 
   colors.forEach((c) => {
-    results.push({
-      type: "color",
-      id: c.id,
-      title: c.name,
-      description: `${c.description} HEX: ${c.hex} | RGB: ${c.rgb}`,
-      previewUrl: "",
-      category: "colors",
-      relevance: 0,
-    });
+    results.push({ type: "color", id: c.id, title: c.name, description: `${c.description} HEX: ${c.hex} | RGB: ${c.rgb}`, previewUrl: "", category: "colors", relevance: 0 });
   });
 
   gradients.forEach((g) => {
-    results.push({
-      type: "gradient",
-      id: g.id,
-      title: g.name,
-      description: g.description,
-      previewUrl: "",
-      category: "gradients",
-      relevance: 0,
-    });
+    results.push({ type: "gradient", id: g.id, title: g.name, description: g.description, previewUrl: "", category: "gradients", relevance: 0 });
   });
 
   typography.forEach((t) => {
-    results.push({
-      type: "typography",
-      id: t.id,
-      title: t.familyName,
-      description: `${t.role}. ${t.usageDescription}`,
-      previewUrl: "",
-      category: "typography",
-      relevance: 0,
-    });
+    results.push({ type: "typography", id: t.id, title: t.familyName, description: `${t.role}. ${t.usageDescription}`, previewUrl: "", category: "typography", relevance: 0 });
   });
 
   guidelines.forEach((g) => {
-    results.push({
-      type: "guideline",
-      id: g.id,
-      title: g.title,
-      description: g.content.substring(0, 200),
-      previewUrl: "",
-      category: "guidelines",
-      relevance: 0,
-    });
+    results.push({ type: "guideline", id: g.id, title: g.title, description: g.content.substring(0, 200), previewUrl: "", category: "guidelines", relevance: 0 });
   });
 
   return results;
@@ -328,114 +282,282 @@ function scoreResult(result: SearchResult, queryTerms: string[]): number {
   return score;
 }
 
+const synonyms: Record<string, string[]> = {
+  logo: ["logo", "logos", "mark", "wordmark", "icon"],
+  font: ["font", "typography", "typeface", "type"],
+  color: ["color", "colours", "palette", "swatch", "hex", "rgb"],
+  gradient: ["gradient", "gradients"],
+  image: ["image", "images", "photo", "photography"],
+  icon: ["icon", "icons"],
+  artwork: ["artwork", "illustration", "pattern", "art"],
+  guideline: ["guideline", "guidelines", "rules", "usage", "brand"],
+  primary: ["primary", "main", "default"],
+  dark: ["dark", "night", "black"],
+  light: ["light", "white"],
+  social: ["social", "instagram", "linkedin", "twitter", "facebook"],
+  presentation: ["presentation", "deck", "slides", "ppt"],
+  web: ["web", "website", "digital", "online"],
+  print: ["print", "printed", "paper"],
+  blue: ["blue", "indigo"],
+  download: ["download", "get", "grab"],
+};
+
+function expandTerms(queryTerms: string[]): string[] {
+  const expanded = new Set(queryTerms);
+  for (const term of queryTerms) {
+    for (const [key, syns] of Object.entries(synonyms)) {
+      if (syns.includes(term) || key === term) {
+        syns.forEach((s) => expanded.add(s));
+      }
+    }
+  }
+  return Array.from(expanded);
+}
+
+// ── Storage implementation ──
+
+const DEMO_USER_ID = "user-demo";
+const DEMO_HUB_ID = "hub-meridian";
+
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private allSearchable: SearchResult[];
+  private userAccounts: Map<string, UserAccount> = new Map();
+  private hubs: Map<string, BrandHub> = new Map();
+
+  // Hub-scoped data maps
+  private hubColors: Map<string, BrandColor[]> = new Map();
+  private hubGradients: Map<string, BrandGradient[]> = new Map();
+  private hubTypography: Map<string, TypographyEntry[]> = new Map();
+  private hubLogos: Map<string, LogoAsset[]> = new Map();
+  private hubAssets: Map<string, BrandAsset[]> = new Map();
+  private hubGuidelines: Map<string, GuidelineModule[]> = new Map();
 
   constructor() {
-    this.users = new Map();
-    this.allSearchable = getAllSearchableItems(
-      demoAssets,
-      demoLogos,
-      demoColors,
-      demoGradients,
-      demoTypography,
-      demoGuidelines
-    );
+    this.seed();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  private seed() {
+    // Create demo user
+    const demoUser: UserAccount = {
+      id: DEMO_USER_ID,
+      email: "demo@brandhub.com",
+      name: "Demo User",
+      passwordHash: "demo123",
+      createdAt: new Date().toISOString(),
+    };
+    this.userAccounts.set(demoUser.id, demoUser);
+
+    // Create demo hub
+    const now = new Date().toISOString();
+    const demoHub: BrandHub = {
+      id: DEMO_HUB_ID,
+      ownerId: DEMO_USER_ID,
+      name: "Meridian",
+      slug: "meridian",
+      description: "Design-forward technology brand",
+      logoUrl: "",
+      primaryColor: "#6366f1",
+      accentColor: "#8b5cf6",
+      heroHeading: "Your brand, all in one place",
+      heroSubheading: "Search, preview, and download every approved brand asset. Powered by an AI brand assistant that finds exactly what you need.",
+      published: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.hubs.set(demoHub.id, demoHub);
+
+    // Seed hub data
+    this.hubColors.set(DEMO_HUB_ID, [...demoColors]);
+    this.hubGradients.set(DEMO_HUB_ID, [...demoGradients]);
+    this.hubTypography.set(DEMO_HUB_ID, [...demoTypography]);
+    this.hubLogos.set(DEMO_HUB_ID, [...demoLogos]);
+    this.hubAssets.set(DEMO_HUB_ID, [...demoAssets]);
+    this.hubGuidelines.set(DEMO_HUB_ID, [...demoGuidelines]);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find((user) => user.username === username);
+  // ── Auth ──
+
+  async getUserByEmail(email: string): Promise<UserAccount | undefined> {
+    return Array.from(this.userAccounts.values()).find((u) => u.email === email);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+  async getUserById(id: string): Promise<UserAccount | undefined> {
+    return this.userAccounts.get(id);
+  }
+
+  async createUserAccount(data: { email: string; name: string; passwordHash: string }): Promise<UserAccount> {
+    const user: UserAccount = {
+      id: randomUUID(),
+      email: data.email,
+      name: data.name,
+      passwordHash: data.passwordHash,
+      createdAt: new Date().toISOString(),
+    };
+    this.userAccounts.set(user.id, user);
     return user;
   }
 
-  getOrganization(): Organization {
-    return demoOrg;
+  // ── Hub CRUD ──
+
+  async getHubsByOwner(ownerId: string): Promise<BrandHub[]> {
+    return Array.from(this.hubs.values()).filter((h) => h.ownerId === ownerId);
   }
 
-  getAssets(category?: string): BrandAsset[] {
-    if (!category) return [...demoAssets, ...demoLogos];
-    if (category === "logos") return demoLogos;
-    return demoAssets.filter((a) => a.category === category);
+  async getHubBySlug(slug: string): Promise<BrandHub | undefined> {
+    return Array.from(this.hubs.values()).find((h) => h.slug === slug);
   }
 
-  getAssetById(id: string): BrandAsset | undefined {
-    return [...demoAssets, ...demoLogos].find((a) => a.id === id);
+  async getHubById(id: string): Promise<BrandHub | undefined> {
+    return this.hubs.get(id);
   }
 
-  getLogos(): LogoAsset[] {
-    return demoLogos;
+  async createHub(data: Omit<BrandHub, "id" | "createdAt" | "updatedAt">): Promise<BrandHub> {
+    const now = new Date().toISOString();
+    const hub: BrandHub = {
+      ...data,
+      id: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.hubs.set(hub.id, hub);
+    // Initialize empty data arrays
+    this.hubColors.set(hub.id, []);
+    this.hubGradients.set(hub.id, []);
+    this.hubTypography.set(hub.id, []);
+    this.hubLogos.set(hub.id, []);
+    this.hubAssets.set(hub.id, []);
+    this.hubGuidelines.set(hub.id, []);
+    return hub;
   }
 
-  getColors(): BrandColor[] {
-    return demoColors;
+  async updateHub(id: string, data: Partial<BrandHub>): Promise<BrandHub> {
+    const hub = this.hubs.get(id);
+    if (!hub) throw new Error("Hub not found");
+    const updated = { ...hub, ...data, id, updatedAt: new Date().toISOString() };
+    this.hubs.set(id, updated);
+    return updated;
   }
 
-  getGradients(): BrandGradient[] {
-    return demoGradients;
+  async deleteHub(id: string): Promise<void> {
+    this.hubs.delete(id);
+    this.hubColors.delete(id);
+    this.hubGradients.delete(id);
+    this.hubTypography.delete(id);
+    this.hubLogos.delete(id);
+    this.hubAssets.delete(id);
+    this.hubGuidelines.delete(id);
   }
 
-  getTypography(): TypographyEntry[] {
-    return demoTypography;
+  // ── Hub-scoped data ──
+
+  getHubColors(hubId: string): BrandColor[] {
+    return this.hubColors.get(hubId) || [];
+  }
+  addHubColor(hubId: string, color: BrandColor): void {
+    const arr = this.hubColors.get(hubId) || [];
+    arr.push(color);
+    this.hubColors.set(hubId, arr);
+  }
+  removeHubColor(hubId: string, colorId: string): void {
+    const arr = this.hubColors.get(hubId) || [];
+    this.hubColors.set(hubId, arr.filter((c) => c.id !== colorId));
   }
 
-  getGuidelines(): GuidelineModule[] {
-    return demoGuidelines.sort((a, b) => a.order - b.order);
+  getHubGradients(hubId: string): BrandGradient[] {
+    return this.hubGradients.get(hubId) || [];
+  }
+  addHubGradient(hubId: string, gradient: BrandGradient): void {
+    const arr = this.hubGradients.get(hubId) || [];
+    arr.push(gradient);
+    this.hubGradients.set(hubId, arr);
+  }
+  removeHubGradient(hubId: string, gradientId: string): void {
+    const arr = this.hubGradients.get(hubId) || [];
+    this.hubGradients.set(hubId, arr.filter((g) => g.id !== gradientId));
   }
 
-  getFeaturedAssets(): BrandAsset[] {
-    return [...demoAssets, ...demoLogos].filter((a) => a.featured);
+  getHubTypography(hubId: string): TypographyEntry[] {
+    return this.hubTypography.get(hubId) || [];
+  }
+  addHubTypography(hubId: string, entry: TypographyEntry): void {
+    const arr = this.hubTypography.get(hubId) || [];
+    arr.push(entry);
+    this.hubTypography.set(hubId, arr);
+  }
+  removeHubTypography(hubId: string, entryId: string): void {
+    const arr = this.hubTypography.get(hubId) || [];
+    this.hubTypography.set(hubId, arr.filter((t) => t.id !== entryId));
   }
 
-  searchAssets(query: string): SearchResult[] {
+  getHubLogos(hubId: string): LogoAsset[] {
+    return this.hubLogos.get(hubId) || [];
+  }
+  addHubLogo(hubId: string, logo: LogoAsset): void {
+    const arr = this.hubLogos.get(hubId) || [];
+    arr.push(logo);
+    this.hubLogos.set(hubId, arr);
+  }
+  removeHubLogo(hubId: string, logoId: string): void {
+    const arr = this.hubLogos.get(hubId) || [];
+    this.hubLogos.set(hubId, arr.filter((l) => l.id !== logoId));
+  }
+
+  getHubAssets(hubId: string, category?: string): BrandAsset[] {
+    const assets = this.hubAssets.get(hubId) || [];
+    const logos = this.hubLogos.get(hubId) || [];
+    const all: BrandAsset[] = [...assets, ...logos];
+    if (!category) return all;
+    if (category === "logos") return logos;
+    return assets.filter((a) => a.category === category);
+  }
+  addHubAsset(hubId: string, asset: BrandAsset): void {
+    const arr = this.hubAssets.get(hubId) || [];
+    arr.push(asset);
+    this.hubAssets.set(hubId, arr);
+  }
+  removeHubAsset(hubId: string, assetId: string): void {
+    const arr = this.hubAssets.get(hubId) || [];
+    this.hubAssets.set(hubId, arr.filter((a) => a.id !== assetId));
+  }
+
+  getHubGuidelines(hubId: string): GuidelineModule[] {
+    return (this.hubGuidelines.get(hubId) || []).sort((a, b) => a.order - b.order);
+  }
+  addHubGuideline(hubId: string, guideline: GuidelineModule): void {
+    const arr = this.hubGuidelines.get(hubId) || [];
+    arr.push(guideline);
+    this.hubGuidelines.set(hubId, arr);
+  }
+  removeHubGuideline(hubId: string, guidelineId: string): void {
+    const arr = this.hubGuidelines.get(hubId) || [];
+    this.hubGuidelines.set(hubId, arr.filter((g) => g.id !== guidelineId));
+  }
+
+  getHubFeaturedAssets(hubId: string): BrandAsset[] {
+    const assets = this.hubAssets.get(hubId) || [];
+    const logos = this.hubLogos.get(hubId) || [];
+    return [...assets, ...logos].filter((a) => a.featured);
+  }
+
+  searchHubAssets(hubId: string, query: string): SearchResult[] {
+    const assets = this.hubAssets.get(hubId) || [];
+    const logos = this.hubLogos.get(hubId) || [];
+    const colors = this.hubColors.get(hubId) || [];
+    const gradients = this.hubGradients.get(hubId) || [];
+    const typography = this.hubTypography.get(hubId) || [];
+    const guidelines = this.hubGuidelines.get(hubId) || [];
+
+    const allSearchable = getAllSearchableItems(assets, logos, colors, gradients, typography, guidelines);
+
     const queryTerms = query
       .toLowerCase()
       .split(/\s+/)
       .filter((t) => t.length > 1);
 
-    // also handle synonyms
-    const synonyms: Record<string, string[]> = {
-      logo: ["logo", "logos", "mark", "wordmark", "icon"],
-      font: ["font", "typography", "typeface", "type"],
-      color: ["color", "colours", "palette", "swatch", "hex", "rgb"],
-      gradient: ["gradient", "gradients"],
-      image: ["image", "images", "photo", "photography"],
-      icon: ["icon", "icons"],
-      artwork: ["artwork", "illustration", "pattern", "art"],
-      guideline: ["guideline", "guidelines", "rules", "usage", "brand"],
-      primary: ["primary", "main", "default"],
-      dark: ["dark", "night", "black"],
-      light: ["light", "white"],
-      social: ["social", "instagram", "linkedin", "twitter", "facebook"],
-      presentation: ["presentation", "deck", "slides", "ppt"],
-      web: ["web", "website", "digital", "online"],
-      print: ["print", "printed", "paper"],
-      blue: ["blue", "indigo"],
-      download: ["download", "get", "grab"],
-    };
+    const expanded = expandTerms(queryTerms);
 
-    const expandedTerms = new Set(queryTerms);
-    for (const term of queryTerms) {
-      for (const [key, syns] of Object.entries(synonyms)) {
-        if (syns.includes(term) || key === term) {
-          syns.forEach((s) => expandedTerms.add(s));
-        }
-      }
-    }
-
-    const scored = this.allSearchable.map((r) => ({
+    const scored = allSearchable.map((r) => ({
       ...r,
-      relevance: scoreResult(r, Array.from(expandedTerms)),
+      relevance: scoreResult(r, expanded),
     }));
 
     return scored

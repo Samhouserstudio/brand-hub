@@ -1,84 +1,436 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { Anthropic } from "@anthropic-ai/sdk";
+import { randomUUID } from "crypto";
+import {
+  signupSchema,
+  loginSchema,
+  createHubSchema,
+  insertColorSchema,
+} from "@shared/schema";
+import type { BrandColor, BrandGradient, TypographyEntry, LogoAsset, BrandAsset, GuidelineModule } from "@shared/schema";
+
+// ── Session store ──
+const sessions = new Map<string, string>(); // token → userId
+
+function getAuthUserId(req: Request): string | null {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  return sessions.get(token) || null;
+}
+
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const userId = getAuthUserId(req);
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+  (req as any).userId = userId;
+  next();
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Organization info
-  app.get("/api/organization", (_req, res) => {
-    res.json(storage.getOrganization());
+  // ══════════════════════════════════════════
+  //  AUTH ROUTES
+  // ══════════════════════════════════════════
+
+  app.post("/api/auth/signup", async (req: Request, res: Response) => {
+    const parsed = signupSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
+      return;
+    }
+    const { email, name, password } = parsed.data;
+
+    const existing = await storage.getUserByEmail(email);
+    if (existing) {
+      res.status(409).json({ message: "Email already in use" });
+      return;
+    }
+
+    const user = await storage.createUserAccount({ email, name, passwordHash: password });
+    const token = randomUUID();
+    sessions.set(token, user.id);
+
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name },
+    });
   });
 
-  // Assets
-  app.get("/api/assets", (req, res) => {
-    const category = req.query.category as string | undefined;
-    res.json(storage.getAssets(category));
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Invalid input" });
+      return;
+    }
+    const { email, password } = parsed.data;
+
+    const user = await storage.getUserByEmail(email);
+    if (!user || user.passwordHash !== password) {
+      res.status(401).json({ message: "Invalid email or password" });
+      return;
+    }
+
+    const token = randomUUID();
+    sessions.set(token, user.id);
+
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, name: user.name },
+    });
   });
 
-  app.get("/api/assets/:id", (req, res) => {
-    const asset = storage.getAssetById(req.params.id);
-    if (!asset) return res.status(404).json({ message: "Asset not found" });
-    res.json(asset);
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    const auth = req.headers.authorization;
+    if (auth && auth.startsWith("Bearer ")) {
+      sessions.delete(auth.slice(7));
+    }
+    res.json({ ok: true });
   });
 
-  app.get("/api/featured", (_req, res) => {
-    res.json(storage.getFeaturedAssets());
+  app.get("/api/auth/me", async (req: Request, res: Response) => {
+    const userId = getAuthUserId(req);
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    res.json({ id: user.id, email: user.email, name: user.name });
   });
 
-  // Logos
-  app.get("/api/logos", (_req, res) => {
-    res.json(storage.getLogos());
+  // ══════════════════════════════════════════
+  //  HUB MANAGEMENT (authenticated)
+  // ══════════════════════════════════════════
+
+  app.get("/api/hubs", requireAuth, async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const hubs = await storage.getHubsByOwner(userId);
+    res.json(hubs);
   });
+
+  app.post("/api/hubs", requireAuth, async (req: Request, res: Response) => {
+    const parsed = createHubSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Invalid input", errors: parsed.error.flatten() });
+      return;
+    }
+    const userId = (req as any).userId;
+
+    // Check slug uniqueness
+    const existing = await storage.getHubBySlug(parsed.data.slug);
+    if (existing) {
+      res.status(409).json({ message: "Slug already taken" });
+      return;
+    }
+
+    const hub = await storage.createHub({
+      ownerId: userId,
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      description: parsed.data.description || "",
+      logoUrl: "",
+      primaryColor: parsed.data.primaryColor || "#6366f1",
+      accentColor: parsed.data.accentColor || "#8b5cf6",
+      heroHeading: `Welcome to ${parsed.data.name}`,
+      heroSubheading: "Your brand assets, all in one place.",
+      published: false,
+    });
+
+    res.json(hub);
+  });
+
+  app.get("/api/hubs/:id", requireAuth, async (req: Request, res: Response) => {
+    const hub = await storage.getHubById(req.params.id as string);
+    if (!hub || hub.ownerId !== (req as any).userId) {
+      res.status(404).json({ message: "Hub not found" });
+      return;
+    }
+    res.json(hub);
+  });
+
+  app.patch("/api/hubs/:id", requireAuth, async (req: Request, res: Response) => {
+    const hub = await storage.getHubById(req.params.id as string);
+    if (!hub || hub.ownerId !== (req as any).userId) {
+      res.status(404).json({ message: "Hub not found" });
+      return;
+    }
+    const updated = await storage.updateHub(req.params.id as string, req.body);
+    res.json(updated);
+  });
+
+  app.delete("/api/hubs/:id", requireAuth, async (req: Request, res: Response) => {
+    const hub = await storage.getHubById(req.params.id as string);
+    if (!hub || hub.ownerId !== (req as any).userId) {
+      res.status(404).json({ message: "Hub not found" });
+      return;
+    }
+    await storage.deleteHub(req.params.id as string);
+    res.json({ ok: true });
+  });
+
+  // ══════════════════════════════════════════
+  //  HUB ADMIN DATA (authenticated, owner only)
+  // ══════════════════════════════════════════
+
+  // Helper to validate hub ownership
+  async function getOwnedHub(req: Request, res: Response): Promise<{ hubId: string } | null> {
+    const hub = await storage.getHubById(req.params.id as string);
+    if (!hub || hub.ownerId !== (req as any).userId) {
+      res.status(404).json({ message: "Hub not found" });
+      return null;
+    }
+    return { hubId: hub.id };
+  }
 
   // Colors
-  app.get("/api/colors", (_req, res) => {
-    res.json(storage.getColors());
+  app.get("/api/hubs/:id/colors", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    res.json(storage.getHubColors(owned.hubId));
+  });
+
+  app.post("/api/hubs/:id/colors", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const color: BrandColor = { id: randomUUID(), ...req.body };
+    storage.addHubColor(owned.hubId, color);
+    res.json(color);
+  });
+
+  app.delete("/api/hubs/:id/colors/:colorId", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    storage.removeHubColor(owned.hubId, req.params.colorId as string);
+    res.json({ ok: true });
   });
 
   // Gradients
-  app.get("/api/gradients", (_req, res) => {
-    res.json(storage.getGradients());
+  app.get("/api/hubs/:id/gradients", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    res.json(storage.getHubGradients(owned.hubId));
+  });
+
+  app.post("/api/hubs/:id/gradients", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const gradient: BrandGradient = { id: randomUUID(), ...req.body };
+    storage.addHubGradient(owned.hubId, gradient);
+    res.json(gradient);
+  });
+
+  app.delete("/api/hubs/:id/gradients/:gradientId", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    storage.removeHubGradient(owned.hubId, req.params.gradientId as string);
+    res.json({ ok: true });
   });
 
   // Typography
-  app.get("/api/typography", (_req, res) => {
-    res.json(storage.getTypography());
+  app.get("/api/hubs/:id/typography", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    res.json(storage.getHubTypography(owned.hubId));
+  });
+
+  app.post("/api/hubs/:id/typography", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const entry: TypographyEntry = { id: randomUUID(), ...req.body };
+    storage.addHubTypography(owned.hubId, entry);
+    res.json(entry);
+  });
+
+  app.delete("/api/hubs/:id/typography/:entryId", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    storage.removeHubTypography(owned.hubId, req.params.entryId as string);
+    res.json({ ok: true });
+  });
+
+  // Logos
+  app.get("/api/hubs/:id/logos", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    res.json(storage.getHubLogos(owned.hubId));
+  });
+
+  app.post("/api/hubs/:id/logos", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const logo: LogoAsset = { id: randomUUID(), ...req.body };
+    storage.addHubLogo(owned.hubId, logo);
+    res.json(logo);
+  });
+
+  app.delete("/api/hubs/:id/logos/:logoId", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    storage.removeHubLogo(owned.hubId, req.params.logoId as string);
+    res.json({ ok: true });
+  });
+
+  // Assets
+  app.get("/api/hubs/:id/assets", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const category = req.query.category as string | undefined;
+    res.json(storage.getHubAssets(owned.hubId, category));
+  });
+
+  app.post("/api/hubs/:id/assets", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const asset: BrandAsset = { id: randomUUID(), ...req.body };
+    storage.addHubAsset(owned.hubId, asset);
+    res.json(asset);
+  });
+
+  app.delete("/api/hubs/:id/assets/:assetId", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    storage.removeHubAsset(owned.hubId, req.params.assetId as string);
+    res.json({ ok: true });
   });
 
   // Guidelines
-  app.get("/api/guidelines", (_req, res) => {
-    res.json(storage.getGuidelines());
+  app.get("/api/hubs/:id/guidelines", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    res.json(storage.getHubGuidelines(owned.hubId));
   });
 
-  // Basic search
-  app.get("/api/search", (req, res) => {
+  app.post("/api/hubs/:id/guidelines", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    const guideline: GuidelineModule = { id: randomUUID(), ...req.body };
+    storage.addHubGuideline(owned.hubId, guideline);
+    res.json(guideline);
+  });
+
+  app.delete("/api/hubs/:id/guidelines/:guidelineId", requireAuth, async (req: Request, res: Response) => {
+    const owned = await getOwnedHub(req, res);
+    if (!owned) return;
+    storage.removeHubGuideline(owned.hubId, req.params.guidelineId as string);
+    res.json({ ok: true });
+  });
+
+  // ══════════════════════════════════════════
+  //  PUBLIC HUB ROUTES (no auth, hub must be published)
+  // ══════════════════════════════════════════
+
+  async function getPublishedHub(slug: string, res: Response) {
+    const hub = await storage.getHubBySlug(slug);
+    if (!hub) {
+      res.status(404).json({ message: "Hub not found" });
+      return null;
+    }
+    if (!hub.published) {
+      res.status(403).json({ message: "This brand hub is not published" });
+      return null;
+    }
+    return hub;
+  }
+
+  app.get("/api/public/:slug", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    // Return hub info (without sensitive fields)
+    res.json({
+      id: hub.id,
+      name: hub.name,
+      slug: hub.slug,
+      description: hub.description,
+      logoUrl: hub.logoUrl,
+      primaryColor: hub.primaryColor,
+      accentColor: hub.accentColor,
+      heroHeading: hub.heroHeading,
+      heroSubheading: hub.heroSubheading,
+    });
+  });
+
+  app.get("/api/public/:slug/colors", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    res.json(storage.getHubColors(hub.id));
+  });
+
+  app.get("/api/public/:slug/gradients", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    res.json(storage.getHubGradients(hub.id));
+  });
+
+  app.get("/api/public/:slug/typography", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    res.json(storage.getHubTypography(hub.id));
+  });
+
+  app.get("/api/public/:slug/logos", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    res.json(storage.getHubLogos(hub.id));
+  });
+
+  app.get("/api/public/:slug/assets", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    const category = req.query.category as string | undefined;
+    res.json(storage.getHubAssets(hub.id, category));
+  });
+
+  app.get("/api/public/:slug/guidelines", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    res.json(storage.getHubGuidelines(hub.id));
+  });
+
+  app.get("/api/public/:slug/featured", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+    res.json(storage.getHubFeaturedAssets(hub.id));
+  });
+
+  app.get("/api/public/:slug/search", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
     const query = (req.query.q as string) || "";
-    if (!query.trim()) return res.json([]);
-    res.json(storage.searchAssets(query));
+    if (!query.trim()) { res.json([]); return; }
+    res.json(storage.searchHubAssets(hub.id, query));
   });
 
-  // AI search (uses Anthropic if available, falls back to keyword)
-  app.post("/api/ai-search", async (req, res) => {
+  // AI search (scoped per hub)
+  app.post("/api/public/:slug/ai-search", async (req: Request, res: Response) => {
+    const hub = await getPublishedHub(req.params.slug as string, res);
+    if (!hub) return;
+
     const { query } = req.body;
     if (!query || typeof query !== "string") {
-      return res.status(400).json({ message: "Query is required" });
+      res.status(400).json({ message: "Query is required" });
+      return;
     }
 
-    // Get all brand data for context
-    const colors = storage.getColors();
-    const gradients = storage.getGradients();
-    const typography = storage.getTypography();
-    const logos = storage.getLogos();
-    const guidelines = storage.getGuidelines();
-    const assets = storage.getAssets();
-    const searchResults = storage.searchAssets(query);
+    const colors = storage.getHubColors(hub.id);
+    const gradients = storage.getHubGradients(hub.id);
+    const typography = storage.getHubTypography(hub.id);
+    const logos = storage.getHubLogos(hub.id);
+    const guidelines = storage.getHubGuidelines(hub.id);
+    const assets = storage.getHubAssets(hub.id);
+    const searchResults = storage.searchHubAssets(hub.id, query);
 
-    // Build brand context
     const brandContext = `
-You are a brand assistant for Meridian. You help users find brand assets, colors, fonts, and guidelines.
+You are a brand assistant for ${hub.name}. You help users find brand assets, colors, fonts, and guidelines.
 
 BRAND DATA:
 
@@ -121,10 +473,8 @@ ${searchResults.map((r) => `- [${r.type}] ${r.title}: ${r.description}`).join("\
         results: searchResults,
       });
     } catch (err) {
-      // Fall back to keyword search if AI unavailable
       console.log("AI search fallback to keyword:", err);
 
-      // Generate a simple response based on keyword matches
       let fallbackAnswer = "";
       if (searchResults.length > 0) {
         const topResult = searchResults[0];

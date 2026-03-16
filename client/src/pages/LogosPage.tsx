@@ -80,8 +80,12 @@ function Wordmark({ bg }: { bg: string }) {
   );
 }
 
-export default function LogosPage() {
-  const { data: logos, isLoading } = useQuery<LogoAsset[]>({ queryKey: ["/api/logos"] });
+interface LogosPageProps {
+  slug: string;
+}
+
+export default function LogosPage({ slug }: LogosPageProps) {
+  const { data: logos, isLoading } = useQuery<LogoAsset[]>({ queryKey: [`/api/public/${slug}/logos`] });
   const [activeBg, setActiveBg] = useState("white");
 
   return (

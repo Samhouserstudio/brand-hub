@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BrandAsset } from "@shared/schema";
 
-export default function ArtworkPage() {
+interface ArtworkPageProps {
+  slug: string;
+}
+
+export default function ArtworkPage({ slug }: ArtworkPageProps) {
   const { data: assets, isLoading } = useQuery<BrandAsset[]>({
-    queryKey: ["/api/assets", { category: "artwork" }],
-    queryFn: async () => {
-      const res = await fetch("/api/assets?category=artwork");
-      return res.json();
-    },
+    queryKey: [`/api/public/${slug}/assets?category=artwork`],
   });
 
   return (

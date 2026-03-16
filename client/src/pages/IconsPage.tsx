@@ -19,13 +19,13 @@ const sampleIcons = [
   { icon: ChevronRight, label: "Arrow" },
 ];
 
-export default function IconsPage() {
+interface IconsPageProps {
+  slug: string;
+}
+
+export default function IconsPage({ slug }: IconsPageProps) {
   const { data: assets, isLoading } = useQuery<BrandAsset[]>({
-    queryKey: ["/api/assets", { category: "icons" }],
-    queryFn: async () => {
-      const res = await fetch("/api/assets?category=icons");
-      return res.json();
-    },
+    queryKey: [`/api/public/${slug}/assets?category=icons`],
   });
 
   return (

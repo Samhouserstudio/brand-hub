@@ -5,8 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TypographyEntry } from "@shared/schema";
 
-export default function TypographyPage() {
-  const { data: typography, isLoading } = useQuery<TypographyEntry[]>({ queryKey: ["/api/typography"] });
+interface TypographyPageProps {
+  slug: string;
+}
+
+export default function TypographyPage({ slug }: TypographyPageProps) {
+  const { data: typography, isLoading } = useQuery<TypographyEntry[]>({ queryKey: [`/api/public/${slug}/typography`] });
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-10" data-testid="page-typography">

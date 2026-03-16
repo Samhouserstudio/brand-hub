@@ -4,8 +4,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { GuidelineModule } from "@shared/schema";
 import { useState } from "react";
 
-export default function GuidelinesPage() {
-  const { data: guidelines, isLoading } = useQuery<GuidelineModule[]>({ queryKey: ["/api/guidelines"] });
+interface GuidelinesPageProps {
+  slug: string;
+}
+
+export default function GuidelinesPage({ slug }: GuidelinesPageProps) {
+  const { data: guidelines, isLoading } = useQuery<GuidelineModule[]>({ queryKey: [`/api/public/${slug}/guidelines`] });
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
 
   const activeModule = activeSlug

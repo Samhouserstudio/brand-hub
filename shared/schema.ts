@@ -146,12 +146,59 @@ export interface SearchResult {
   downloadFiles?: DownloadFile[];
 }
 
+// ── User Account ──
+export interface UserAccount {
+  id: string;
+  email: string;
+  name: string;
+  passwordHash: string;
+  createdAt: string;
+}
+
+// ── Brand Hub ──
+export interface BrandHub {
+  id: string;
+  ownerId: string;
+  name: string;
+  slug: string;
+  description: string;
+  logoUrl: string;
+  primaryColor: string;
+  accentColor: string;
+  heroHeading: string;
+  heroSubheading: string;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── AI Search schemas ──
 export const searchQuerySchema = z.object({
   query: z.string().min(1).max(500),
 });
 
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
+
+// ── Auth schemas ──
+export const signupSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  password: z.string().min(6),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
+});
+
+// ── Hub schemas ──
+export const createHubSchema = z.object({
+  name: z.string().min(1).max(100),
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
+  description: z.string().optional().default(""),
+  primaryColor: z.string().optional().default("#6366f1"),
+  accentColor: z.string().optional().default("#8b5cf6"),
+});
 
 // ── Insert schemas (for admin) ──
 export const insertAssetSchema = z.object({

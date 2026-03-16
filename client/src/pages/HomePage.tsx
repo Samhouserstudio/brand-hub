@@ -15,19 +15,24 @@ import {
 import type { BrandAsset } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const categories = [
-  { label: "Logos", href: "/logos", icon: Hexagon, description: "Primary, secondary, and icon marks", color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
-  { label: "Colors", href: "/colors", icon: Palette, description: "Palette, swatches, and gradients", color: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
-  { label: "Typography", href: "/typography", icon: Type, description: "Fonts, hierarchy, and specimens", color: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-  { label: "Images", href: "/images", icon: Image, description: "Photography and approved visuals", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-  { label: "Artwork", href: "/artwork", icon: Sparkles, description: "Illustrations, patterns, templates", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  { label: "Icons", href: "/icons", icon: Shapes, description: "UI and social media icon sets", color: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
-  { label: "Guidelines", href: "/guidelines", icon: BookOpen, description: "Brand rules and usage guide", color: "bg-teal-500/10 text-teal-600 dark:text-teal-400" },
-];
+interface HomePageProps {
+  slug: string;
+}
 
-export default function HomePage() {
+export default function HomePage({ slug }: HomePageProps) {
+  const base = `/hub/${slug}`;
+  const categories = [
+    { label: "Logos", href: `${base}/logos`, icon: Hexagon, description: "Primary, secondary, and icon marks", color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
+    { label: "Colors", href: `${base}/colors`, icon: Palette, description: "Palette, swatches, and gradients", color: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+    { label: "Typography", href: `${base}/typography`, icon: Type, description: "Fonts, hierarchy, and specimens", color: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
+    { label: "Images", href: `${base}/images`, icon: Image, description: "Photography and approved visuals", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+    { label: "Artwork", href: `${base}/artwork`, icon: Sparkles, description: "Illustrations, patterns, templates", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+    { label: "Icons", href: `${base}/icons`, icon: Shapes, description: "UI and social media icon sets", color: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+    { label: "Guidelines", href: `${base}/guidelines`, icon: BookOpen, description: "Brand rules and usage guide", color: "bg-teal-500/10 text-teal-600 dark:text-teal-400" },
+  ];
+
   const { data: featured, isLoading } = useQuery<BrandAsset[]>({
-    queryKey: ["/api/featured"],
+    queryKey: [`/api/public/${slug}/featured`],
   });
 
   return (
@@ -47,7 +52,7 @@ export default function HomePage() {
             Search, preview, and download every approved brand asset. Powered by an AI assistant that finds exactly what you need.
           </p>
 
-          <AISearch variant="hero" />
+          <AISearch variant="hero" slug={slug} />
         </div>
       </section>
 
